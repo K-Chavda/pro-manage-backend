@@ -30,4 +30,8 @@ const endpointURL = "/api/v1";
 const userRouter = require("./routes/user.route");
 app.use(`${endpointURL}/user`, userRouter);
 
+// Task Router
+const taskRouter = require("./routes/task.route");
+app.use(`${endpointURL}/tasks`, taskRouter);
+
 module.exports = app;

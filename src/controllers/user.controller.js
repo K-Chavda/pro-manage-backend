@@ -9,16 +9,16 @@ const registerUser = async (req, res, next) => {
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please, Provide all the required fields",
+        message: "Please provide all the required fields.",
       });
     }
 
     const user = await User.findOne({ email });
 
     if (user) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        message: "User already exists",
+        message: "User already exists.",
       });
     }
 
@@ -28,120 +28,139 @@ const registerUser = async (req, res, next) => {
       name,
       email,
       password: hashedPassword,
-      createdAt: new Date(),
-      createdBy: req.user._id,
     });
 
     return res.status(201).json({
       success: true,
-      message: "User created successfully",
+      message: "User created successfully.",
       data: newUser,
     });
   } catch (error) {
-    next(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
   }
 };
 
 const loginUser = async (req, res, next) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "Please, Provide all the required fields",
-    });
-  }
-
-  const userDetails = await User.findOne({ email: email });
-
-  if (!userDetails) {
-    return res.status(400).json({
-      success: false,
-      message: "User does not exists",
-    });
-  }
-
-  const isPasswordMatch = await bcrypt.compare(password, userDetails.password);
-
-  if (!isPasswordMatch) {
-    return res.status(400).json({
-      success: false,
-      message: "Incorrect User Credentials",
-    });
-  }
-
-  const token = await jwt.sign(
-    {
-      userId: userDetails._id,
-      email: userDetails.email,
-    },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: "1d",
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all the required fields.",
+      });
     }
-  );
 
-  if (!token) {
-    return res.status(400).json({
-      success: false,
-      message: "Token Generation Failed",
+    const userDetails = await User.findOne({ email });
+
+    if (!userDetails) {
+      return res.status(404).json({
+        success: false,
+        message: "User does not exist.",
+      });
+    }
+
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      userDetails.password
+    );
+
+    if (!isPasswordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect credentials.",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        userId: userDetails._id,
+        email: userDetails.email,
+      },
+      process.env.TOKEN_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "User logged in successfully.",
+      token,
       data: userDetails,
     });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
   }
-
-  return res.status(200).json({
-    success: true,
-    message: "User logged in successfully",
-    token,
-    data: userDetails,
-  });
 };
 
 const updateUserDetails = async (req, res, next) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
+    const { userId } = req.params;
 
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "Please, Provide all the required fields",
-    });
-  }
-
-  const userDetails = await User.findOne({ email: email });
-
-  if (userDetails.email === email) {
-    return res.status(400).json({
-      success: false,
-      message: "Please, Provide different email address",
-    });
-  }
-
-  const isPasswordMatch = await bcrypt.compare(password, userDetails.password);
-
-  if (isPasswordMatch) {
-    return res.status(400).json({
-      success: false,
-      message: "Please, Provide different password",
-    });
-  }
-
-  const updateUserDetails = await User.findOneAndUpdate(
-    {
-      email: email,
-    },
-    {
-      email: email,
-      password: 123,
-      updatedAt: new Date(),
-      updatedBy: req.user._id,
+    if (!email && !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a value to update.",
+      });
     }
-  );
 
-  return res.status(200).json({
-    success: true,
-    message: "User details updated successfully",
-    data: updateUserDetails,
-  });
+    const userDetails = await User.findById(userId);
+
+    if (!userDetails) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (email && userDetails.email === email) {
+      return res.status(409).json({
+        success: false,
+        message: "Please provide a different email address.",
+      });
+    }
+
+    if (email) userDetails.email = email;
+
+    if (password) {
+      const isPasswordMatch = await bcrypt.compare(
+        password,
+        userDetails.password
+      );
+      if (isPasswordMatch) {
+        return res.status(409).json({
+          success: false,
+          message: "Please provide a different password.",
+        });
+      }
+      userDetails.password = await bcrypt.hash(password, 8);
+    }
+
+    userDetails.updatedAt = new Date();
+    userDetails.updatedBy = userId;
+
+    await userDetails.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "User details updated successfully.",
+      data: userDetails,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
 };
 
 module.exports = {

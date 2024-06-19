@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 
 const checkListItemSchema = new mongoose.Schema({
-  checkListId: {
-    type: mongoose.Schema.Types.ObjectId,
+  title: {
+    type: String,
     required: true,
   },
   isCompleted: {
     type: Boolean,
-    required: true,
+    default: false,
   },
   createdAt: {
     type: Date,
@@ -28,10 +28,6 @@ const checkListItemSchema = new mongoose.Schema({
 });
 
 const taskSchema = new mongoose.Schema({
-  taskId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
   title: {
     type: String,
     required: true,
@@ -39,6 +35,8 @@ const taskSchema = new mongoose.Schema({
   priority: {
     type: String,
     required: true,
+    default: "LOW",
+    enum: ["LOW", "MODERATE", "HIGH"],
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -46,16 +44,16 @@ const taskSchema = new mongoose.Schema({
     required: true,
   },
   assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    type: String,
   },
   dueDate: {
     type: Date,
-    required: true,
   },
   status: {
     type: String,
     required: true,
+    default: "IN PROGRESS",
+    enum: ["BACKLOG", "TO DO", "IN PROGRESS", "COMPLETED"],
   },
   checklist: [checkListItemSchema],
   createdAt: {

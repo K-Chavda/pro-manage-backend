@@ -79,7 +79,7 @@ const loginUser = async (req, res, next) => {
     const token = jwt.sign(
       {
         userId: userDetails._id,
-        email: userDetails.email,
+        userEmail: userDetails.email,
       },
       process.env.TOKEN_SECRET,
       { expiresIn: "1d" }
@@ -89,7 +89,7 @@ const loginUser = async (req, res, next) => {
       success: true,
       message: "User logged in successfully.",
       token,
-      data: userDetails,
+      userDetails,
     });
   } catch (error) {
     return res.status(500).json({

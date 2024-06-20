@@ -39,8 +39,7 @@ const taskSchema = new mongoose.Schema({
     enum: ["LOW", "MODERATE", "HIGH"],
   },
   owner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    type: String,
     required: true,
   },
   assignedTo: {

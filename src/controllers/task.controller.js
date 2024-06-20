@@ -1,11 +1,19 @@
 const Task = require("../models/task.model");
+const User = require("../models/user.model");
 
 const createTask = async (req, res, next) => {
   try {
-    const { title, priority, owner, status, dueDate, assignedTo, checklist } =
-      req.body;
+    const {
+      title,
+      priority,
+      status,
+      dueDate,
+      assignedTo,
+      checklist,
+      userEmail,
+    } = req.body;
 
-    if (!title || !priority || !owner) {
+    if (!title || !priority) {
       return res.status(400).json({
         success: false,
         message: "Please provide all the required fields.",
@@ -24,7 +32,7 @@ const createTask = async (req, res, next) => {
     const newTask = await Task.create({
       title,
       priority,
-      owner,
+      owner: userEmail,
       status,
       dueDate,
       assignedTo,
@@ -48,6 +56,8 @@ const createTask = async (req, res, next) => {
 const updateTask = async (req, res, next) => {
   try {
     const { taskId } = req.params;
+    const { title, priority, status, dueDate, assignedTo, userEmail } =
+      req.body;
 
     const task = await Task.findById({ _id: taskId });
 
@@ -58,15 +68,21 @@ const updateTask = async (req, res, next) => {
       });
     }
 
-    if (req.body.title) task.title = req.body.title;
-    if (req.body.priority) task.priority = req.body.priority;
-    if (req.body.owner) task.owner = req.body.owner;
-    if (req.body.status) task.status = req.body.status;
-    if (req.body.dueDate) task.dueDate = req.body.dueDate;
-    if (req.body.assignedTo) task.assignedTo = req.body.assignedTo;
+    if (task.owner !== userEmail && task.assignedTo !== userEmail) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Task Update Access is Restricted to The Task Owner and The User it's Assigned to..",
+      });
+    }
+
+    if (title) task.title = title;
+    if (priority) task.priority = priority;
+    if (status) task.status = status;
+    if (dueDate) task.dueDate = dueDate;
+    if (assignedTo && task.owner === userEmail) task.assignedTo = assignedTo;
 
     task.updatedAt = new Date();
-    // task.updatedBy = ._id;
 
     await task.save();
 
@@ -87,6 +103,7 @@ const updateTask = async (req, res, next) => {
 const deleteTask = async (req, res, next) => {
   try {
     const { taskId } = req.params;
+    const { userEmail } = req.body;
 
     const task = await Task.findById({ _id: taskId });
 
@@ -94,6 +111,13 @@ const deleteTask = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: "Task not found.",
+      });
+    }
+
+    if (task.owner !== userEmail) {
+      return res.status(401).json({
+        success: false,
+        message: "Task Delete Access is Restricted to The Task Owner..",
       });
     }
 
@@ -157,13 +181,257 @@ const createCheckList = async (req, res, next) => {
   }
 };
 
-const updateCheckList = async (req, res, next) => {};
+const updateCheckList = async (req, res, next) => {
+  try {
+    const { taskId, checkListId } = req.params;
+    const { title, isCompleted } = req.body;
 
-const deleteCheckList = async (req, res, next) => {};
+    if (!taskId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide taskId.",
+      });
+    }
 
-const getTask = async (req, res, next) => {};
+    if (!checkListId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide checklistId.",
+      });
+    }
 
-const getCheckList = async (req, res, next) => {};
+    const task = await Task.findById({ _id: taskId });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found.",
+      });
+    }
+
+    const checklistIndex = task.checklist.findIndex(
+      (checklist) => checklist._id.toString() === checkListId
+    );
+
+    if (checklistIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Checklist not found.",
+      });
+    }
+
+    if (title) task.checklist[checklistIndex].title = title;
+    task.checklist[checklistIndex].isCompleted = isCompleted;
+    task.checklist[checklistIndex].updatedAt = new Date();
+
+    await task.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Checklist updated successfully.",
+      task,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
+const deleteCheckList = async (req, res, next) => {
+  try {
+    const { taskId, checkListId } = req.params;
+
+    if (!taskId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide taskId.",
+      });
+    }
+
+    if (!checkListId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide checkListId.",
+      });
+    }
+
+    const task = await Task.findById({ _id: taskId });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found.",
+      });
+    }
+
+    const checklistIndex = task.checklist.findIndex(
+      (checklist) => checklist._id.toString() === checkListId
+    );
+
+    if (checklistIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Checklist not found.",
+      });
+    }
+
+    task.checklist.splice(checklistIndex, 1);
+    await task.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Checklist deleted successfully.",
+      task,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
+const getTask = async (req, res, next) => {
+  try {
+    const { taskId } = req.params;
+
+    const task = await Task.findById({ _id: taskId });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Task retrieved successfully.",
+      task,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
+const getCheckList = async (req, res, next) => {
+  try {
+    const { taskId } = req.params;
+
+    if (!taskId) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide taskId.",
+      });
+    }
+
+    const task = await Task.findById({ _id: taskId });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found.",
+      });
+    }
+
+    if (!task.checklist || task.checklist.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Checklist not found.",
+      });
+    }
+
+    const checklist = task.checklist;
+
+    return res.status(200).json({
+      success: true,
+      message: "Checklist retrieved successfully.",
+      checklist,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
+const getAnalytics = async (req, res, next) => {
+  try {
+    const { userEmail } = req.body;
+    console.log(userEmail);
+    const userTasks = await Task.find({
+      $or: [{ owner: userEmail }, { assignedTo: userEmail }],
+    });
+
+    if (!userTasks) {
+      return res.status(404).json({
+        success: false,
+        message: "User tasks not found.",
+      });
+    }
+
+    const completedTasksCount = userTasks.filter(
+      (task) => task.status === "COMPLETED"
+    ).length;
+
+    const inProgressTasksCount = userTasks.filter(
+      (task) => task.status === "IN PROGRESS"
+    ).length;
+
+    const toDoTasksCount = userTasks.filter(
+      (task) => task.status === "TO DO"
+    ).length;
+
+    const backlogTasksCount = userTasks.filter(
+      (task) => task.status === "BACKLOG"
+    ).length;
+
+    const lowPriorityTasks = userTasks.filter(
+      (task) => task.priority === "LOW"
+    ).length;
+
+    const moderatePriorityTasks = userTasks.filter(
+      (task) => task.priority === "MODERATE"
+    ).length;
+
+    const highPriorityTasks = userTasks.filter(
+      (task) => task.priority === "HIGH"
+    ).length;
+
+    const dueDatedTasks = userTasks.filter(
+      (task) => task.dueDate && task.dueDate < new Date()
+    ).length;
+
+    return res.status(200).json({
+      success: true,
+      message: "Analytics data retrieved successfully.",
+      completedTasksCount,
+      inProgressTasksCount,
+      toDoTasksCount,
+      backlogTasksCount,
+      lowPriorityTasks,
+      moderatePriorityTasks,
+      highPriorityTasks,
+      dueDatedTasks,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   createTask,
@@ -174,4 +442,5 @@ module.exports = {
   deleteCheckList,
   getTask,
   getCheckList,
+  getAnalytics,
 };

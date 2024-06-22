@@ -15,14 +15,20 @@ const registerUser = async (req, res, next) => {
 
     const user = await User.findOne({ email });
 
+    const hashedPassword = await bcrypt.hash(password, 8);
+
     if (user) {
-      return res.status(409).json({
-        success: false,
-        message: "User already exists.",
+      user.name = name;
+      user.password = hashedPassword;
+
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "User updated successfully.",
+        data: user,
       });
     }
-
-    const hashedPassword = await bcrypt.hash(password, 8);
 
     const newUser = await User.create({
       name,
@@ -163,8 +169,75 @@ const updateUserDetails = async (req, res, next) => {
   }
 };
 
+const addUser = async (req, res, next) => {
+  try {
+    const { email, userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Unauthorized Access.",
+      });
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all the required fields.",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (user) {
+      return res.status(409).json({
+        success: false,
+        message: "User already exists.",
+      });
+    }
+
+    const newUser = await User.create({
+      email,
+      createdBy: userId,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "User created successfully.",
+      newUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
+const getUsers = async (req, res, next) => {
+  const { userId } = req.body;
+  try {
+    const users = await User.find({ createdBy: userId });
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully.",
+      data: users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   updateUserDetails,
+  addUser,
+  getUsers,
 };

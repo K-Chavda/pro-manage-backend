@@ -9,6 +9,7 @@ const verifyToken = require("../middlewares/verifyToken");
 router.post("/", verifyToken, taskController.createTask);
 router.put("/:taskId", verifyToken, taskController.updateTask);
 router.delete("/:taskId", verifyToken, taskController.deleteTask);
+router.patch("/:taskId", verifyToken, taskController.updateTaskStatus);
 
 /*
  * Routes to Create, Update, Delete CheckList
@@ -33,6 +34,7 @@ router.get("/analytics", verifyToken, taskController.getAnalytics);
 /*
  * Routes to Get Task, CheckList
  */
+router.get("/", verifyToken, taskController.getAllTasks);
 router.get("/:taskId", verifyToken, taskController.getTask);
 router.get("/:taskId/checklists", verifyToken, taskController.getCheckList);
 

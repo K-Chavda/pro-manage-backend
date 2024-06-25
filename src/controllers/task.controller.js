@@ -72,7 +72,7 @@ const updateTask = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message:
-          "Task Update Access is Restricted to The Task Owner and The User it's Assigned to..",
+          "Task Update Access is Restricted to The Task Owner and The User it's Assigned to.",
       });
     }
 
@@ -117,7 +117,7 @@ const deleteTask = async (req, res, next) => {
     if (task.owner !== userEmail) {
       return res.status(401).json({
         success: false,
-        message: "Task Delete Access is Restricted to The Task Owner..",
+        message: "Task Delete Access is Restricted to The Task Owner.",
       });
     }
 
@@ -433,6 +433,100 @@ const getAnalytics = async (req, res, next) => {
   }
 };
 
+const getAllTasks = async (req, res, next) => {
+  try {
+    const { userEmail } = req.body;
+
+    if (!userEmail) {
+      return res.status(404).json({
+        success: false,
+        message: "Unauthorized Access.",
+      });
+    }
+
+    const userTasks = await Task.find({
+      $or: [{ owner: userEmail }, { assignedTo: userEmail }],
+    });
+
+    if (!userTasks) {
+      return res.status(404).json({
+        success: false,
+        message: "No tasks found.",
+      });
+    }
+
+    const tasksByStatus = userTasks.reduce((acc, task) => {
+      const status = task.status.toLowerCase().replaceAll(" ", "");
+      console.log(status);
+      if (!acc[status]) {
+        acc[status] = [];
+      }
+      acc[status].push(task);
+      return acc;
+    }, {});
+
+    console.log(tasksByStatus);
+
+    return res.status(200).json({
+      success: true,
+      message: "Tasks retrieved successfully.",
+      tasks: {
+        backlog: tasksByStatus.backlog || [],
+        todo: tasksByStatus.todo || [],
+        inProgress: tasksByStatus.inprogress || [],
+        done: tasksByStatus.done || [],
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
+const updateTaskStatus = async (req, res, next) => {
+  try {
+    const { taskId } = req.params;
+    const { status, userEmail } = req.body;
+
+    const task = await Task.findById({ _id: taskId });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found.",
+      });
+    }
+
+    if (task.owner !== userEmail && task.assignedTo !== userEmail) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Task Status Update Access is Restricted to The Task Owner and The User it's Assigned to.",
+      });
+    }
+
+    task.status = status;
+    task.updatedAt = new Date();
+
+    await task.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Task status updated successfully.",
+      task,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createTask,
   updateTask,
@@ -443,4 +537,6 @@ module.exports = {
   getTask,
   getCheckList,
   getAnalytics,
+  getAllTasks,
+  updateTaskStatus,
 };

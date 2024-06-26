@@ -52,7 +52,7 @@ const taskSchema = new mongoose.Schema({
     type: String,
     required: true,
     default: "IN PROGRESS",
-    enum: ["BACKLOG", "TO DO", "IN PROGRESS", "COMPLETED"],
+    enum: ["BACKLOG", "TO DO", "IN PROGRESS", "DONE"],
   },
   checklist: [checkListItemSchema],
   createdAt: {

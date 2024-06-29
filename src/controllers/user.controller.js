@@ -108,7 +108,7 @@ const loginUser = async (req, res, next) => {
 
 const updateUserDetails = async (req, res, next) => {
   try {
-    const { name, email, password, userId } = req.body;
+    const { name, email, oldPassword, newPassword, userId } = req.body;
 
     const userDetails = await User.findById(userId);
 
@@ -121,31 +121,38 @@ const updateUserDetails = async (req, res, next) => {
 
     if (name) userDetails.name = name;
 
-    if (email && userDetails.email === email) {
-      return res.status(409).json({
-        success: false,
-        message: "Please provide a different email address.",
-      });
-    }
-
-    if (email) userDetails.email = email;
-
-    if (password) {
-      const isPasswordMatch = await bcrypt.compare(
-        password,
-        userDetails.password
-      );
-      if (isPasswordMatch) {
+    if (email && email !== userDetails.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
         return res.status(409).json({
           success: false,
-          message: "Please provide a different password.",
+          message: "Email already in use.",
         });
       }
-      userDetails.password = await bcrypt.hash(password, 8);
+      userDetails.email = email;
     }
 
-    userDetails.updatedAt = new Date();
-    userDetails.updatedBy = userId;
+    if (oldPassword && newPassword) {
+      const isOldPasswordMatch = await bcrypt.compare(
+        oldPassword,
+        userDetails.password
+      );
+
+      if (!isOldPasswordMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Old password is incorrect.",
+        });
+      }
+
+      if (oldPassword === newPassword) {
+        return res.status(409).json({
+          success: false,
+          message: "New password must be different.",
+        });
+      }
+      userDetails.password = await bcrypt.hash(newPassword, 8);
+    }
 
     await userDetails.save();
 

@@ -409,7 +409,7 @@ const getAnalytics = async (req, res, next) => {
     ).length;
 
     const dueDatedTasks = userTasks.filter(
-      (task) => task.dueDate && task.dueDate < new Date()
+      (task) => task.dueDate //&& task.dueDate < new Date()
     ).length;
 
     return res.status(200).json({

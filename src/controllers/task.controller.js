@@ -368,7 +368,7 @@ const getCheckList = async (req, res, next) => {
 const getAnalytics = async (req, res, next) => {
   try {
     const { userEmail } = req.body;
-    console.log(userEmail);
+
     const userTasks = await Task.find({
       $or: [{ owner: userEmail }, { assignedTo: userEmail }],
     });
@@ -380,8 +380,8 @@ const getAnalytics = async (req, res, next) => {
       });
     }
 
-    const completedTasksCount = userTasks.filter(
-      (task) => task.status === "COMPLETED"
+    const doneTasksCount = userTasks.filter(
+      (task) => task.status === "DONE"
     ).length;
 
     const inProgressTasksCount = userTasks.filter(
@@ -457,15 +457,13 @@ const getAllTasks = async (req, res, next) => {
 
     const tasksByStatus = userTasks.reduce((acc, task) => {
       const status = task.status.toLowerCase().replaceAll(" ", "");
-      console.log(status);
+
       if (!acc[status]) {
         acc[status] = [];
       }
       acc[status].push(task);
       return acc;
     }, {});
-
-    console.log(tasksByStatus);
 
     return res.status(200).json({
       success: true,

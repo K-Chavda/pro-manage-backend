@@ -415,7 +415,7 @@ const getAnalytics = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Analytics data retrieved successfully.",
-      completedTasksCount,
+      doneTasksCount,
       inProgressTasksCount,
       toDoTasksCount,
       backlogTasksCount,

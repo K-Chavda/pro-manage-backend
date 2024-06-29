@@ -108,8 +108,7 @@ const loginUser = async (req, res, next) => {
 
 const updateUserDetails = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
-    const { userId } = req.params;
+    const { name, email, password, userId } = req.body;
 
     const userDetails = await User.findById(userId);
 

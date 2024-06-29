@@ -8,5 +8,6 @@ router.post("/login", userController.loginUser);
 router.patch("/update", verifyToken, userController.updateUserDetails);
 router.post("/add", verifyToken, userController.addUser);
 router.get("/get", verifyToken, userController.getUsers);
+router.get("/details/", verifyToken, userController.getUsersById);
 
 module.exports = router;

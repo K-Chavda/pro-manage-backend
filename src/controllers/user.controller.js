@@ -228,10 +228,37 @@ const getUsers = async (req, res, next) => {
   }
 };
 
+const getUsersById = async (req, res, next) => {
+  const { userId } = req.body;
+  try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User fetched successfully.",
+      data: user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   updateUserDetails,
   addUser,
   getUsers,
+  getUsersById,
 };

@@ -108,15 +108,8 @@ const loginUser = async (req, res, next) => {
 
 const updateUserDetails = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { name, email, password } = req.body;
     const { userId } = req.params;
-
-    if (!email && !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a value to update.",
-      });
-    }
 
     const userDetails = await User.findById(userId);
 
@@ -126,6 +119,8 @@ const updateUserDetails = async (req, res, next) => {
         message: "User not found.",
       });
     }
+
+    if (name) userDetails.name = name;
 
     if (email && userDetails.email === email) {
       return res.status(409).json({

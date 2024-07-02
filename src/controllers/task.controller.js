@@ -158,20 +158,38 @@ const createCheckList = async (req, res, next) => {
       });
     }
 
-    const newCheckList = {
-      title,
-      isCompleted: isCompleted || false,
-      createdAt: new Date(),
-    };
+    // Check if checklist already exists with the given title
+    const existingChecklist = task.checklist.find(
+      (item) => item.title === title
+    );
 
-    task.checklist.push(newCheckList);
-    await task.save();
+    if (existingChecklist) {
+      // Update existing checklist
+      existingChecklist.isCompleted = isCompleted || false;
+      await task.save();
 
-    return res.status(201).json({
-      success: true,
-      message: "Checklist created successfully.",
-      data: newCheckList,
-    });
+      return res.status(200).json({
+        success: true,
+        message: "Checklist updated successfully.",
+        data: existingChecklist,
+      });
+    } else {
+      // Create new checklist
+      const newCheckList = {
+        title,
+        isCompleted: isCompleted || false,
+        createdAt: new Date(),
+      };
+
+      task.checklist.push(newCheckList);
+      await task.save();
+
+      return res.status(201).json({
+        success: true,
+        message: "Checklist created successfully.",
+        data: newCheckList,
+      });
+    }
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -525,6 +543,75 @@ const updateTaskStatus = async (req, res, next) => {
   }
 };
 
+const getFilteredIds = async (req, res, next) => {
+  try {
+    const { filterValue } = req.body;
+
+    const today = new Date();
+    let query;
+
+    if (filterValue === "this month") {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      query = {
+        createdAt: {
+          $gte: thirtyDaysAgo,
+          $lt: today,
+        },
+      };
+    } else if (filterValue === "this week") {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      query = {
+        createdAt: {
+          $gte: sevenDaysAgo,
+          $lt: today,
+        },
+      };
+    } else if (filterValue === "today") {
+      const startOfDay = new Date(today);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      query = {
+        createdAt: {
+          $gte: startOfDay,
+          $lt: endOfDay,
+        },
+      };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid filter value.",
+      });
+    }
+
+    const tasks = await Task.find(query, { _id: 1 });
+
+    if (!tasks.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No tasks found.",
+      });
+    }
+
+    const taskIds = tasks.map((task) => task._id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Filtered task IDs retrieved successfully.",
+      taskIds,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createTask,
   updateTask,
@@ -537,4 +624,5 @@ module.exports = {
   getAnalytics,
   getAllTasks,
   updateTaskStatus,
+  getFilteredIds,
 };

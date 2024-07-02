@@ -35,7 +35,12 @@ router.get("/analytics", verifyToken, taskController.getAnalytics);
  * Routes to Get Task, CheckList
  */
 router.get("/", verifyToken, taskController.getAllTasks);
-router.get("/:taskId", verifyToken, taskController.getTask);
+router.get("/:taskId", taskController.getTask);
 router.get("/:taskId/checklists", verifyToken, taskController.getCheckList);
+
+/*
+ * Get Filtered ID's for Tasks
+ */
+router.post("/filtered-ids", verifyToken, taskController.getFilteredIds);
 
 module.exports = router;

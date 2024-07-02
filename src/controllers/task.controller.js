@@ -158,38 +158,20 @@ const createCheckList = async (req, res, next) => {
       });
     }
 
-    // Check if checklist already exists with the given title
-    const existingChecklist = task.checklist.find(
-      (item) => item.title === title
-    );
+    const newCheckList = {
+      title,
+      isCompleted: isCompleted || false,
+      createdAt: new Date(),
+    };
 
-    if (existingChecklist) {
-      // Update existing checklist
-      existingChecklist.isCompleted = isCompleted || false;
-      await task.save();
+    task.checklist.push(newCheckList);
+    await task.save();
 
-      return res.status(200).json({
-        success: true,
-        message: "Checklist updated successfully.",
-        data: existingChecklist,
-      });
-    } else {
-      // Create new checklist
-      const newCheckList = {
-        title,
-        isCompleted: isCompleted || false,
-        createdAt: new Date(),
-      };
-
-      task.checklist.push(newCheckList);
-      await task.save();
-
-      return res.status(201).json({
-        success: true,
-        message: "Checklist created successfully.",
-        data: newCheckList,
-      });
-    }
+    return res.status(201).json({
+      success: true,
+      message: "Checklist created successfully.",
+      data: newCheckList,
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,

@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
+const Task = require("../models/task.model");
 
 const registerUser = async (req, res, next) => {
   try {
@@ -121,6 +122,8 @@ const updateUserDetails = async (req, res, next) => {
 
     if (name) userDetails.name = name;
 
+    let emailChanged = false;
+    let oldEmail = userDetails.email;
     if (email && email !== userDetails.email) {
       const emailExists = await User.findOne({ email });
       if (emailExists) {
@@ -129,6 +132,7 @@ const updateUserDetails = async (req, res, next) => {
           message: "Email already in use.",
         });
       }
+      emailChanged = true;
       userDetails.email = email;
     }
 
@@ -155,6 +159,10 @@ const updateUserDetails = async (req, res, next) => {
     }
 
     await userDetails.save();
+
+    if (emailChanged) {
+      await Task.updateMany({ owner: oldEmail }, { $set: { owner: email } });
+    }
 
     return res.status(200).json({
       success: true,
